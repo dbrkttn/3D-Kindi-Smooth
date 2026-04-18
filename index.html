@@ -2,127 +2,96 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Modern 3D Viewer</title>
+<title>3D Debug Viewer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
   body { margin: 0; overflow: hidden; }
   canvas { display: block; }
+  #debug {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: black;
+    color: lime;
+    padding: 10px;
+    font-family: monospace;
+    z-index: 1000;
+  }
 </style>
 </head>
 <body>
 
-<!-- Three.js (non-module for GitHub Pages compatibility) -->
+<div id="debug">Loading...</div>
+
 <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
 <script src="https://unpkg.com/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
 
 <script>
-// ----------------------
+const debug = document.getElementById("debug");
+function log(msg) {
+  console.log(msg);
+  debug.innerHTML += "<br>" + msg;
+}
+
 // Scene
-// ----------------------
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf0f0f0);
+scene.background = new THREE.Color(0xaaaaaa);
 
-// ----------------------
 // Camera
-// ----------------------
-const camera = new THREE.PerspectiveCamera(
-  60,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  10000
-);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 10000);
+camera.position.set(100, 100, 100);
 
-// ----------------------
 // Renderer
-// ----------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-
-// 🔥 Important performance tweak
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-
 document.body.appendChild(renderer.domElement);
 
-// ----------------------
-// Controls (smooth)
-// ----------------------
+// Controls
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.screenSpacePanning = true;
 
-// ----------------------
-// Lighting
-// ----------------------
-scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+// Light
+scene.add(new THREE.AmbientLight(0xffffff, 1));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-dirLight.position.set(100, 200, 100);
-scene.add(dirLight);
+// 🔴 ADD TEST CUBE (VERY IMPORTANT)
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(),
+  new THREE.MeshNormalMaterial()
+);
+scene.add(cube);
+log("Cube added");
 
-// ----------------------
-// Load GLB model
-// ----------------------
+// Load model
 const loader = new THREE.GLTFLoader();
 
 loader.load(
-  "./BC-Kindi-3D.glb",  // ✅ your file
+  "./BC-Kindi-3D.glb",
   function (gltf) {
-    console.log("MODEL LOADED ✅");
-
-    const model = gltf.scene;
-
-    // Optimize meshes
-    model.traverse(function (child) {
-      if (child.isMesh) {
-        child.frustumCulled = true;
-      }
-    });
-
-    // 🔥 Auto center + fit camera
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-
-    model.position.sub(center);
-
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 2;
-
-    camera.position.set(distance, distance, distance);
-    controls.target.set(0, 0, 0);
-    controls.update();
-
-    scene.add(model);
+    log("MODEL LOADED ✅");
+    scene.add(gltf.scene);
   },
   function (xhr) {
-    console.log((xhr.loaded / xhr.total * 100) + "% loaded");
+    log("Loading: " + (xhr.loaded / xhr.total * 100).toFixed(1) + "%");
   },
   function (error) {
-    console.error("ERROR LOADING MODEL ❌", error);
+    log("ERROR ❌ " + error.message);
   }
 );
 
-// ----------------------
-// Resize handling
-// ----------------------
-window.addEventListener("resize", function () {
+// Resize
+window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ----------------------
-// Animation loop
-// ----------------------
+// Animate
 function animate() {
   requestAnimationFrame(animate);
-  controls.update(); // required for damping
+  controls.update();
   renderer.render(scene, camera);
 }
-
 animate();
 
 </script>
