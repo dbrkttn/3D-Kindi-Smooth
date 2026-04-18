@@ -12,64 +12,81 @@
 </head>
 <body>
 
-<script type="module">
-import * as THREE from "https://unpkg.com/three@0.150.1/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "https://unpkg.com/three@0.150.1/examples/jsm/loaders/GLTFLoader.js";
+<!-- Three.js (non-module for GitHub Pages compatibility) -->
+<script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
+<script src="https://unpkg.com/three@0.150.1/examples/js/loaders/GLTFLoader.js"></script>
 
+<script>
+// ----------------------
 // Scene
+// ----------------------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f0f0);
 
+// ----------------------
 // Camera
+// ----------------------
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
   10000
 );
-camera.position.set(100, 100, 100);
 
+// ----------------------
 // Renderer
+// ----------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+
+// 🔥 Important performance tweak
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
 document.body.appendChild(renderer.domElement);
 
+// ----------------------
 // Controls (smooth)
-const controls = new OrbitControls(camera, renderer.domElement);
+// ----------------------
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.screenSpacePanning = true;
 
+// ----------------------
 // Lighting
+// ----------------------
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
 dirLight.position.set(100, 200, 100);
 scene.add(dirLight);
 
-// Load model
-const loader = new GLTFLoader();
+// ----------------------
+// Load GLB model
+// ----------------------
+const loader = new THREE.GLTFLoader();
 
 loader.load(
-  "./BC-Kindi-3D.glb",   // ✅ YOUR FILE NAME HERE
-  (gltf) => {
+  "./BC-Kindi-3D.glb",  // ✅ your file
+  function (gltf) {
+    console.log("MODEL LOADED ✅");
+
     const model = gltf.scene;
 
     // Optimize meshes
-    model.traverse((child) => {
+    model.traverse(function (child) {
       if (child.isMesh) {
         child.frustumCulled = true;
       }
     });
 
-    // 🔥 Auto-center + fit camera (IMPORTANT)
+    // 🔥 Auto center + fit camera
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
 
-    model.position.sub(center); // center model
+    model.position.sub(center);
 
     const maxDim = Math.max(size.x, size.y, size.z);
     const distance = maxDim * 2;
@@ -80,27 +97,32 @@ loader.load(
 
     scene.add(model);
   },
-  (xhr) => {
+  function (xhr) {
     console.log((xhr.loaded / xhr.total * 100) + "% loaded");
   },
-  (error) => {
-    console.error("Error loading model:", error);
+  function (error) {
+    console.error("ERROR LOADING MODEL ❌", error);
   }
 );
 
-// Resize
-window.addEventListener("resize", () => {
+// ----------------------
+// Resize handling
+// ----------------------
+window.addEventListener("resize", function () {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ----------------------
 // Animation loop
+// ----------------------
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
+  controls.update(); // required for damping
   renderer.render(scene, camera);
 }
+
 animate();
 
 </script>
